@@ -1,0 +1,950 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 80%;
+                 height: 800;
+                 background-color: #222222;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+             #loadingBar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width: 80%;
+                 height: 800;
+                 background-color:rgba(200,200,200,0.8);
+                 -webkit-transition: all 0.5s ease;
+                 -moz-transition: all 0.5s ease;
+                 -ms-transition: all 0.5s ease;
+                 -o-transition: all 0.5s ease;
+                 transition: all 0.5s ease;
+                 opacity:1;
+             }
+
+             #bar {
+                 position:absolute;
+                 top:0px;
+                 left:0px;
+                 width:20px;
+                 height:20px;
+                 margin:auto auto auto auto;
+                 border-radius:11px;
+                 border:2px solid rgba(30,30,30,0.05);
+                 background: rgb(0, 173, 246); /* Old browsers */
+                 box-shadow: 2px 0px 4px rgba(0,0,0,0.4);
+             }
+
+             #border {
+                 position:absolute;
+                 top:10px;
+                 left:10px;
+                 width:500px;
+                 height:23px;
+                 margin:auto auto auto auto;
+                 box-shadow: 0px 0px 4px rgba(0,0,0,0.2);
+                 border-radius:10px;
+             }
+
+             #text {
+                 position:absolute;
+                 top:8px;
+                 left:530px;
+                 width:30px;
+                 height:50px;
+                 margin:auto auto auto auto;
+                 font-size:22px;
+                 color: #000000;
+             }
+
+             div.outerBorder {
+                 position:relative;
+                 top:400px;
+                 width:600px;
+                 height:44px;
+                 margin:auto auto auto auto;
+                 border:8px solid rgba(0,0,0,0.1);
+                 background: rgb(252,252,252); /* Old browsers */
+                 background: -moz-linear-gradient(top,  rgba(252,252,252,1) 0%, rgba(237,237,237,1) 100%); /* FF3.6+ */
+                 background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,rgba(252,252,252,1)), color-stop(100%,rgba(237,237,237,1))); /* Chrome,Safari4+ */
+                 background: -webkit-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Chrome10+,Safari5.1+ */
+                 background: -o-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* Opera 11.10+ */
+                 background: -ms-linear-gradient(top,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* IE10+ */
+                 background: linear-gradient(to bottom,  rgba(252,252,252,1) 0%,rgba(237,237,237,1) 100%); /* W3C */
+                 filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#fcfcfc', endColorstr='#ededed',GradientType=0 ); /* IE6-9 */
+                 border-radius:72px;
+                 box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
+             }
+             
+
+             
+             #config {
+                 float: left;
+                 width: 400px;
+                 height: 600px;
+             }
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="2843.0">2843.0</option>
+                                
+                                    <option value="Viktoria Rodina">Viktoria Rodina</option>
+                                
+                                    <option value="157557.0">157557.0</option>
+                                
+                                    <option value="458212.0">458212.0</option>
+                                
+                                    <option value="615592.0">615592.0</option>
+                                
+                                    <option value="822858.0">822858.0</option>
+                                
+                                    <option value="992670.0">992670.0</option>
+                                
+                                    <option value="7283.0">7283.0</option>
+                                
+                                    <option value="Michail Aleksandrovitj Afanasov">Michail Aleksandrovitj Afanasov</option>
+                                
+                                    <option value="129447.0">129447.0</option>
+                                
+                                    <option value="38966.0">38966.0</option>
+                                
+                                    <option value="Samantha Lewthwaite">Samantha Lewthwaite</option>
+                                
+                                    <option value="155705.0">155705.0</option>
+                                
+                                    <option value="174096.0">174096.0</option>
+                                
+                                    <option value="468651.0">468651.0</option>
+                                
+                                    <option value="559212.0">559212.0</option>
+                                
+                                    <option value="581757.0">581757.0</option>
+                                
+                                    <option value="636203.0">636203.0</option>
+                                
+                                    <option value="708119.0">708119.0</option>
+                                
+                                    <option value="722822.0">722822.0</option>
+                                
+                                    <option value="773826.0">773826.0</option>
+                                
+                                    <option value="936796.0">936796.0</option>
+                                
+                                    <option value="47584.0">47584.0</option>
+                                
+                                    <option value="Yon Jun Jo">Yon Jun Jo</option>
+                                
+                                    <option value="214538.0">214538.0</option>
+                                
+                                    <option value="280028.0">280028.0</option>
+                                
+                                    <option value="344527.0">344527.0</option>
+                                
+                                    <option value="580800.0">580800.0</option>
+                                
+                                    <option value="687198.0">687198.0</option>
+                                
+                                    <option value="Smirnova, Natalia">Smirnova, Natalia</option>
+                                
+                                    <option value="898982.0">898982.0</option>
+                                
+                                    <option value="974084.0">974084.0</option>
+                                
+                                    <option value="70296.0">70296.0</option>
+                                
+                                    <option value="Ivan Luciano Marquez Marin Arango">Ivan Luciano Marquez Marin Arango</option>
+                                
+                                    <option value="214014.0">214014.0</option>
+                                
+                                    <option value="359983.0">359983.0</option>
+                                
+                                    <option value="781472.0">781472.0</option>
+                                
+                                    <option value="104019.0">104019.0</option>
+                                
+                                    <option value="Michael Long">Michael Long</option>
+                                
+                                    <option value="585690.0">585690.0</option>
+                                
+                                    <option value="104564.0">104564.0</option>
+                                
+                                    <option value="Tetiana Viktorivna Pereverzeva">Tetiana Viktorivna Pereverzeva</option>
+                                
+                                    <option value="746102.0">746102.0</option>
+                                
+                                    <option value="121103.0">121103.0</option>
+                                
+                                    <option value="Alison Merrilla Redford">Alison Merrilla Redford</option>
+                                
+                                    <option value="210630.0">210630.0</option>
+                                
+                                    <option value="300697.0">300697.0</option>
+                                
+                                    <option value="342109.0">342109.0</option>
+                                
+                                    <option value="714462.0">714462.0</option>
+                                
+                                    <option value="724320.0">724320.0</option>
+                                
+                                    <option value="865997.0">865997.0</option>
+                                
+                                    <option value="897676.0">897676.0</option>
+                                
+                                    <option value="975370.0">975370.0</option>
+                                
+                                    <option value="123438.0">123438.0</option>
+                                
+                                    <option value="Bezrukov, Sergey Vitalyevich">Bezrukov, Sergey Vitalyevich</option>
+                                
+                                    <option value="276498.0">276498.0</option>
+                                
+                                    <option value="285332.0">285332.0</option>
+                                
+                                    <option value="413636.0">413636.0</option>
+                                
+                                    <option value="468436.0">468436.0</option>
+                                
+                                    <option value="563341.0">563341.0</option>
+                                
+                                    <option value="690064.0">690064.0</option>
+                                
+                                    <option value="729884.0">729884.0</option>
+                                
+                                    <option value="136166.0">136166.0</option>
+                                
+                                    <option value="Jose Benito Cabrera Cuevas">Jose Benito Cabrera Cuevas</option>
+                                
+                                    <option value="184131.0">184131.0</option>
+                                
+                                    <option value="215907.0">215907.0</option>
+                                
+                                    <option value="325949.0">325949.0</option>
+                                
+                                    <option value="964899.0">964899.0</option>
+                                
+                                    <option value="138164.0">138164.0</option>
+                                
+                                    <option value="Zheynova, Marina Nikolaevna">Zheynova, Marina Nikolaevna</option>
+                                
+                                    <option value="167504.0">167504.0</option>
+                                
+                                    <option value="Tsertsel, Ivan Stanislavavich">Tsertsel, Ivan Stanislavavich</option>
+                                
+                                    <option value="251973.0">251973.0</option>
+                                
+                                    <option value="775923.0">775923.0</option>
+                                
+                                    <option value="853201.0">853201.0</option>
+                                
+                                    <option value="888531.0">888531.0</option>
+                                
+                                    <option value="173550.0">173550.0</option>
+                                
+                                    <option value="Harrell, Ryan Matson Johnson">Harrell, Ryan Matson Johnson</option>
+                                
+                                    <option value="199171.0">199171.0</option>
+                                
+                                    <option value="Trinidad Y Ramirez, Angelo">Trinidad Y Ramirez, Angelo</option>
+                                
+                                    <option value="224976.0">224976.0</option>
+                                
+                                    <option value="237748.0">237748.0</option>
+                                
+                                    <option value="256345.0">256345.0</option>
+                                
+                                    <option value="476223.0">476223.0</option>
+                                
+                                    <option value="491887.0">491887.0</option>
+                                
+                                    <option value="202099.0">202099.0</option>
+                                
+                                    <option value="Richard Harris">Richard Harris</option>
+                                
+                                    <option value="291686.0">291686.0</option>
+                                
+                                    <option value="684352.0">684352.0</option>
+                                
+                                    <option value="708565.0">708565.0</option>
+                                
+                                    <option value="742609.0">742609.0</option>
+                                
+                                    <option value="824356.0">824356.0</option>
+                                
+                                    <option value="869066.0">869066.0</option>
+                                
+                                    <option value="993180.0">993180.0</option>
+                                
+                                    <option value="225525.0">225525.0</option>
+                                
+                                    <option value="774930.0">774930.0</option>
+                                
+                                    <option value="243258.0">243258.0</option>
+                                
+                                    <option value="Oleksin, Alexei Ivanovich">Oleksin, Alexei Ivanovich</option>
+                                
+                                    <option value="507823.0">507823.0</option>
+                                
+                                    <option value="265765.0">265765.0</option>
+                                
+                                    <option value="Alexander Pealer">Alexander Pealer</option>
+                                
+                                    <option value="774763.0">774763.0</option>
+                                
+                                    <option value="895316.0">895316.0</option>
+                                
+                                    <option value="288293.0">288293.0</option>
+                                
+                                    <option value="Christine Hines Johnson Dawson">Christine Hines Johnson Dawson</option>
+                                
+                                    <option value="310299.0">310299.0</option>
+                                
+                                    <option value="Jones, Sally Anne">Jones, Sally Anne</option>
+                                
+                                    <option value="426345.0">426345.0</option>
+                                
+                                    <option value="712803.0">712803.0</option>
+                                
+                                    <option value="717520.0">717520.0</option>
+                                
+                                    <option value="967733.0">967733.0</option>
+                                
+                                    <option value="317709.0">317709.0</option>
+                                
+                                    <option value="Poklonskaya, Natalija Vladimirovna">Poklonskaya, Natalija Vladimirovna</option>
+                                
+                                    <option value="435621.0">435621.0</option>
+                                
+                                    <option value="417516.0">417516.0</option>
+                                
+                                    <option value="Heather Ann Wilson">Heather Ann Wilson</option>
+                                
+                                    <option value="939418.0">939418.0</option>
+                                
+                                    <option value="455557.0">455557.0</option>
+                                
+                                    <option value="Azarenok, Grigori Yurievich">Azarenok, Grigori Yurievich</option>
+                                
+                                    <option value="654829.0">654829.0</option>
+                                
+                                    <option value="918433.0">918433.0</option>
+                                
+                                    <option value="468209.0">468209.0</option>
+                                
+                                    <option value="Rakhim Azizboevich Azimov">Rakhim Azizboevich Azimov</option>
+                                
+                                    <option value="568406.0">568406.0</option>
+                                
+                                    <option value="684829.0">684829.0</option>
+                                
+                                    <option value="819257.0">819257.0</option>
+                                
+                                    <option value="Hlaing, Min Aung">Hlaing, Min Aung</option>
+                                
+                                    <option value="737624.0">737624.0</option>
+                                
+                                    <option value="800047.0">800047.0</option>
+                                
+                                    <option value="893020.0">893020.0</option>
+                                
+                                    <option value="573303.0">573303.0</option>
+                                
+                                    <option value="O Jong Gil">O Jong Gil</option>
+                                
+                                    <option value="699168.0">699168.0</option>
+                                
+                                    <option value="Cesar Duarte Jaquez">Cesar Duarte Jaquez</option>
+                                
+                                    <option value="769677.0">769677.0</option>
+                                
+                                    <option value="815111.0">815111.0</option>
+                                
+                                    <option value="Leonid I. Kalaschnikow">Leonid I. Kalaschnikow</option>
+                                
+                                    <option value="Paul Franklin Watson">Paul Franklin Watson</option>
+                                
+                                    <option value="852872.0">852872.0</option>
+                                
+                                    <option value="Alexey Alexeyevich Gromov">Alexey Alexeyevich Gromov</option>
+                                
+                                    <option value="875037.0">875037.0</option>
+                                
+                                    <option value="Mazhuga, Aleksandr G.">Mazhuga, Aleksandr G.</option>
+                                
+                                    <option value="894497.0">894497.0</option>
+                                
+                                    <option value="920959.0">920959.0</option>
+                                
+                                    <option value="Margaret Smith">Margaret Smith</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+              <div id="filter-menu" class="card-header">
+                <div class="row no-gutters">
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'item')"
+                            id="select-item"
+                        >
+                        <option value="">Select a network item</option>
+                        <option value="edge">edge</option>
+                        <option value="node">node</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'property')"
+                            id="select-property"
+                        >
+                        <option value="">Select a property...</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            id="select-value"
+                        >
+                        <option value="">Select value(s)...</option>
+                    </select>
+                  </div>
+                  <div class="col-1 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="highlightFilter(filter);">Filter</button>
+                  </div>
+                  <div class="col-2 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="clearFilter(true)">Reset Selection</button>
+                  </div>
+                </div>
+              </div>
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+            <div id="loadingBar">
+              <div class="outerBorder">
+                <div id="text">0%</div>
+                <div id="border">
+                  <div id="bar"></div>
+                </div>
+              </div>
+            </div>
+        
+        
+            <div id="config"></div>
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+                  // explicitly using onItemAdd and this function as we need to save multiple values
+                  let updateValueFilter = function() {
+                      return function () {
+                      filter['value'].push(arguments[0])
+                      }
+                  }
+
+                  let valueControl = new TomSelect("#select-value",{
+                      maxItems: null,
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: updateValueFilter()
+                  });
+
+                  let addValues = function() {
+                      return function () {
+                          // clear the current value options and add the selected attribute values
+                          // tom-select handles duplicates
+                          let selectedProperty = arguments[0];
+                          valueControl.clear();
+                          valueControl.clearOptions();
+                          filter['value'] = []
+                          if (filter['item'] === 'node') {
+                              for (let each in allNodes) {
+                                  valueControl.addOption({
+                                      id:allNodes[each][selectedProperty],
+                                      title:allNodes[each][selectedProperty]
+                                  })
+                              }
+                          }
+                          else if (filter['item'] === 'edge') {
+                              for (let each in allEdges) {
+                                  valueControl.addOption({
+                                      id:allEdges[each][selectedProperty],
+                                      title:allEdges[each][selectedProperty]
+                                  })
+                              }
+                          }
+                      }
+                  };
+
+                  let propControl = new TomSelect("#select-property",{
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addValues()
+                  });
+
+                  let addProperties = function() {
+                      return function () {
+                          // loops through the selected network item and adds the attributes to dropdown
+                          // tom-select handles duplicates
+                          clearFilter(false)
+                          if (arguments[0] === 'edge') {
+                              for (let each in allEdges) {
+                                  if (allEdges.hasOwnProperty(each)) {
+                                      for (let eachProp in allEdges[each]) {
+                                          if (allEdges[each].hasOwnProperty(eachProp)) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          else if (arguments[0] === 'node') {
+                              for (let each in allNodes) {
+                                  if (allNodes.hasOwnProperty(each)) {
+                                      for (let eachProp in allNodes[each]) {
+                                          if (allNodes[each].hasOwnProperty(eachProp)
+                                              && (eachProp !== 'hidden' && eachProp !== 'savedLabel'
+                                                  && eachProp !== 'hiddenLabel')) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  };
+
+                  let itemControl = new TomSelect("#select-item",{
+                      create: false,
+                      sortField:{
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addProperties()
+                  });
+
+                  function clearFilter(reset) {
+                      // utility function to clear all the selected filter options
+                      // if reset is set to true, the existing filter will be removed
+                      // else, only the dropdown options are cleared
+                      propControl.clear();
+                      propControl.clearOptions();
+                      valueControl.clear();
+                      valueControl.clearOptions();
+                      filter = {
+                          item : '',
+                          property : '',
+                          value : []
+                      }
+                      if (reset) {
+                          itemControl.clear();
+                          filterHighlight({nodes: []})
+                      }
+                  }
+
+                  function updateFilter(value, key) {
+                      // key could be 'item' or 'property' and value is as selected in dropdown
+                      filter[key] = value
+                  }
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "font": {"color": "white"}, "id": "2843.0", "label": "2843.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Viktoria Rodina", "label": "Viktoria Rodina", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "157557.0", "label": "157557.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "458212.0", "label": "458212.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "615592.0", "label": "615592.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "822858.0", "label": "822858.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "992670.0", "label": "992670.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "7283.0", "label": "7283.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Michail Aleksandrovitj Afanasov", "label": "Michail Aleksandrovitj Afanasov", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "129447.0", "label": "129447.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "38966.0", "label": "38966.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Samantha Lewthwaite", "label": "Samantha Lewthwaite", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "155705.0", "label": "155705.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "174096.0", "label": "174096.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "468651.0", "label": "468651.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "559212.0", "label": "559212.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "581757.0", "label": "581757.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "636203.0", "label": "636203.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "708119.0", "label": "708119.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "722822.0", "label": "722822.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "773826.0", "label": "773826.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "936796.0", "label": "936796.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "47584.0", "label": "47584.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Yon Jun Jo", "label": "Yon Jun Jo", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "214538.0", "label": "214538.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "280028.0", "label": "280028.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "344527.0", "label": "344527.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "580800.0", "label": "580800.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "687198.0", "label": "687198.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Smirnova, Natalia", "label": "Smirnova, Natalia", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "898982.0", "label": "898982.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "974084.0", "label": "974084.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "70296.0", "label": "70296.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Ivan Luciano Marquez Marin Arango", "label": "Ivan Luciano Marquez Marin Arango", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "214014.0", "label": "214014.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "359983.0", "label": "359983.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "781472.0", "label": "781472.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "104019.0", "label": "104019.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Michael Long", "label": "Michael Long", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "585690.0", "label": "585690.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "104564.0", "label": "104564.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Tetiana Viktorivna Pereverzeva", "label": "Tetiana Viktorivna Pereverzeva", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "746102.0", "label": "746102.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "121103.0", "label": "121103.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Alison Merrilla Redford", "label": "Alison Merrilla Redford", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "210630.0", "label": "210630.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "300697.0", "label": "300697.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "342109.0", "label": "342109.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "714462.0", "label": "714462.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "724320.0", "label": "724320.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "865997.0", "label": "865997.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "897676.0", "label": "897676.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "975370.0", "label": "975370.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "123438.0", "label": "123438.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Bezrukov, Sergey Vitalyevich", "label": "Bezrukov, Sergey Vitalyevich", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "276498.0", "label": "276498.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "285332.0", "label": "285332.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "413636.0", "label": "413636.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "468436.0", "label": "468436.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "563341.0", "label": "563341.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "690064.0", "label": "690064.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "729884.0", "label": "729884.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "136166.0", "label": "136166.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Jose Benito Cabrera Cuevas", "label": "Jose Benito Cabrera Cuevas", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "184131.0", "label": "184131.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "215907.0", "label": "215907.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "325949.0", "label": "325949.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "964899.0", "label": "964899.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "138164.0", "label": "138164.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Zheynova, Marina Nikolaevna", "label": "Zheynova, Marina Nikolaevna", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "167504.0", "label": "167504.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Tsertsel, Ivan Stanislavavich", "label": "Tsertsel, Ivan Stanislavavich", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "251973.0", "label": "251973.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "775923.0", "label": "775923.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "853201.0", "label": "853201.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "888531.0", "label": "888531.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "173550.0", "label": "173550.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Harrell, Ryan Matson Johnson", "label": "Harrell, Ryan Matson Johnson", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "199171.0", "label": "199171.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Trinidad Y Ramirez, Angelo", "label": "Trinidad Y Ramirez, Angelo", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "224976.0", "label": "224976.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "237748.0", "label": "237748.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "256345.0", "label": "256345.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "476223.0", "label": "476223.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "491887.0", "label": "491887.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "202099.0", "label": "202099.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Richard Harris", "label": "Richard Harris", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "291686.0", "label": "291686.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "684352.0", "label": "684352.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "708565.0", "label": "708565.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "742609.0", "label": "742609.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "824356.0", "label": "824356.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "869066.0", "label": "869066.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "993180.0", "label": "993180.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "225525.0", "label": "225525.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "774930.0", "label": "774930.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "243258.0", "label": "243258.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Oleksin, Alexei Ivanovich", "label": "Oleksin, Alexei Ivanovich", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "507823.0", "label": "507823.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "265765.0", "label": "265765.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Alexander Pealer", "label": "Alexander Pealer", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "774763.0", "label": "774763.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "895316.0", "label": "895316.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "288293.0", "label": "288293.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Christine Hines Johnson Dawson", "label": "Christine Hines Johnson Dawson", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "310299.0", "label": "310299.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Jones, Sally Anne", "label": "Jones, Sally Anne", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "426345.0", "label": "426345.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "712803.0", "label": "712803.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "717520.0", "label": "717520.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "967733.0", "label": "967733.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "317709.0", "label": "317709.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Poklonskaya, Natalija Vladimirovna", "label": "Poklonskaya, Natalija Vladimirovna", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "435621.0", "label": "435621.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "417516.0", "label": "417516.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Heather Ann Wilson", "label": "Heather Ann Wilson", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "939418.0", "label": "939418.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "455557.0", "label": "455557.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Azarenok, Grigori Yurievich", "label": "Azarenok, Grigori Yurievich", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "654829.0", "label": "654829.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "918433.0", "label": "918433.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "468209.0", "label": "468209.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Rakhim Azizboevich Azimov", "label": "Rakhim Azizboevich Azimov", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "568406.0", "label": "568406.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "684829.0", "label": "684829.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "819257.0", "label": "819257.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Hlaing, Min Aung", "label": "Hlaing, Min Aung", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "737624.0", "label": "737624.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "800047.0", "label": "800047.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "893020.0", "label": "893020.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "573303.0", "label": "573303.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "O Jong Gil", "label": "O Jong Gil", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "699168.0", "label": "699168.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Cesar Duarte Jaquez", "label": "Cesar Duarte Jaquez", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "769677.0", "label": "769677.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "815111.0", "label": "815111.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Leonid I. Kalaschnikow", "label": "Leonid I. Kalaschnikow", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Paul Franklin Watson", "label": "Paul Franklin Watson", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "852872.0", "label": "852872.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Alexey Alexeyevich Gromov", "label": "Alexey Alexeyevich Gromov", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "875037.0", "label": "875037.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Mazhuga, Aleksandr G.", "label": "Mazhuga, Aleksandr G.", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "894497.0", "label": "894497.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "920959.0", "label": "920959.0", "shape": "dot", "size": 10}, {"color": "#97c2fc", "font": {"color": "white"}, "id": "Margaret Smith", "label": "Margaret Smith", "shape": "dot", "size": 10}]);
+                  edges = new vis.DataSet([{"emt": 390.1761605715335, "from": "2843.0", "to": "Viktoria Rodina", "width": 1}, {"emt": 3983.016963157771, "from": "Viktoria Rodina", "to": "157557.0", "width": 1}, {"emt": 397.10908447812034, "from": "Viktoria Rodina", "to": "458212.0", "width": 1}, {"emt": 507.187461908455, "from": "Viktoria Rodina", "to": "615592.0", "width": 1}, {"emt": 498.9539620124144, "from": "Viktoria Rodina", "to": "822858.0", "width": 1}, {"emt": 4929.192165301814, "from": "Viktoria Rodina", "to": "992670.0", "width": 1}, {"emt": 408.5646826461199, "from": "7283.0", "to": "Michail Aleksandrovitj Afanasov", "width": 1}, {"emt": 198.3795920178925, "from": "Michail Aleksandrovitj Afanasov", "to": "129447.0", "width": 1}, {"emt": 4007.947253339756, "from": "38966.0", "to": "Samantha Lewthwaite", "width": 1}, {"emt": 3035.5397831898126, "from": "Samantha Lewthwaite", "to": "155705.0", "width": 1}, {"emt": 404.4118047020818, "from": "Samantha Lewthwaite", "to": "174096.0", "width": 1}, {"emt": 402.9789346372608, "from": "Samantha Lewthwaite", "to": "468651.0", "width": 1}, {"emt": 511.3974569307411, "from": "Samantha Lewthwaite", "to": "559212.0", "width": 1}, {"emt": 488.3215556563449, "from": "Samantha Lewthwaite", "to": "581757.0", "width": 1}, {"emt": 503.1521318097656, "from": "Samantha Lewthwaite", "to": "636203.0", "width": 1}, {"emt": 403.5401401877386, "from": "Samantha Lewthwaite", "to": "708119.0", "width": 1}, {"emt": 420.05075603231967, "from": "Samantha Lewthwaite", "to": "722822.0", "width": 1}, {"emt": 409.2497006485124, "from": "Samantha Lewthwaite", "to": "773826.0", "width": 1}, {"emt": 2903.652196454836, "from": "Samantha Lewthwaite", "to": "936796.0", "width": 1}, {"emt": 513.7231717212696, "from": "47584.0", "to": "Yon Jun Jo", "width": 1}, {"emt": 4972.041114954084, "from": "Yon Jun Jo", "to": "214538.0", "width": 1}, {"emt": 5010.71021858965, "from": "Yon Jun Jo", "to": "280028.0", "width": 1}, {"emt": 4865.198252404635, "from": "Yon Jun Jo", "to": "344527.0", "width": 1}, {"emt": 3931.656661455778, "from": "Yon Jun Jo", "to": "580800.0", "width": 1}, {"emt": 499.7162500972937, "from": "Yon Jun Jo", "to": "687198.0", "width": 1}, {"emt": 4127.8872494125935, "from": "Yon Jun Jo", "to": "Smirnova, Natalia", "width": 1}, {"emt": 4131.156187975069, "from": "Yon Jun Jo", "to": "898982.0", "width": 1}, {"emt": 502.9462153811231, "from": "Yon Jun Jo", "to": "974084.0", "width": 1}, {"emt": 410.0554484705406, "from": "70296.0", "to": "Ivan Luciano Marquez Marin Arango", "width": 1}, {"emt": 144.22113480247043, "from": "Ivan Luciano Marquez Marin Arango", "to": "214014.0", "width": 1}, {"emt": 407.8178147242657, "from": "Ivan Luciano Marquez Marin Arango", "to": "359983.0", "width": 1}, {"emt": 3117.661515827236, "from": "Ivan Luciano Marquez Marin Arango", "to": "781472.0", "width": 1}, {"emt": 112.99599697074868, "from": "104019.0", "to": "Michael Long", "width": 1}, {"emt": 1520.1621550129084, "from": "Michael Long", "to": "585690.0", "width": 1}, {"emt": 394.0667252515728, "from": "104564.0", "to": "Tetiana Viktorivna Pereverzeva", "width": 1}, {"emt": 301.9139330895166, "from": "Tetiana Viktorivna Pereverzeva", "to": "746102.0", "width": 1}, {"emt": 510.0568336641936, "from": "121103.0", "to": "Alison Merrilla Redford", "width": 1}, {"emt": 504.7299682835042, "from": "Alison Merrilla Redford", "to": "210630.0", "width": 1}, {"emt": 479.7546030444983, "from": "Alison Merrilla Redford", "to": "300697.0", "width": 1}, {"emt": 501.73342914958994, "from": "Alison Merrilla Redford", "to": "342109.0", "width": 1}, {"emt": 486.984203156985, "from": "Alison Merrilla Redford", "to": "714462.0", "width": 1}, {"emt": 387.524541394136, "from": "Alison Merrilla Redford", "to": "724320.0", "width": 1}, {"emt": 5093.614869068139, "from": "Alison Merrilla Redford", "to": "865997.0", "width": 1}, {"emt": 502.033015356871, "from": "Alison Merrilla Redford", "to": "897676.0", "width": 1}, {"emt": 161.42364069356205, "from": "Alison Merrilla Redford", "to": "975370.0", "width": 1}, {"emt": 298.7205198075349, "from": "123438.0", "to": "Bezrukov, Sergey Vitalyevich", "width": 1}, {"emt": 499.1040891554938, "from": "Bezrukov, Sergey Vitalyevich", "to": "276498.0", "width": 1}, {"emt": 522.227580405608, "from": "Bezrukov, Sergey Vitalyevich", "to": "285332.0", "width": 1}, {"emt": 381.8963136116458, "from": "Bezrukov, Sergey Vitalyevich", "to": "413636.0", "width": 1}, {"emt": 4882.248815508127, "from": "Bezrukov, Sergey Vitalyevich", "to": "468436.0", "width": 1}, {"emt": 511.5722513370557, "from": "Bezrukov, Sergey Vitalyevich", "to": "563341.0", "width": 1}, {"emt": 2022.940384113807, "from": "Bezrukov, Sergey Vitalyevich", "to": "690064.0", "width": 1}, {"emt": 218.05037268836148, "from": "Bezrukov, Sergey Vitalyevich", "to": "729884.0", "width": 1}, {"emt": 3925.530764351668, "from": "136166.0", "to": "Jose Benito Cabrera Cuevas", "width": 1}, {"emt": 288.9324701155436, "from": "Jose Benito Cabrera Cuevas", "to": "184131.0", "width": 1}, {"emt": 396.8146763551316, "from": "Jose Benito Cabrera Cuevas", "to": "215907.0", "width": 1}, {"emt": 392.6869992846068, "from": "Jose Benito Cabrera Cuevas", "to": "325949.0", "width": 1}, {"emt": 2984.8521155156345, "from": "Jose Benito Cabrera Cuevas", "to": "964899.0", "width": 1}, {"emt": 395.7342811030756, "from": "138164.0", "to": "Zheynova, Marina Nikolaevna", "width": 1}, {"emt": 509.81769216299057, "from": "167504.0", "to": "Tsertsel, Ivan Stanislavavich", "width": 1}, {"emt": 4953.854349189989, "from": "Tsertsel, Ivan Stanislavavich", "to": "251973.0", "width": 1}, {"emt": 489.7778865030226, "from": "Tsertsel, Ivan Stanislavavich", "to": "775923.0", "width": 1}, {"emt": 402.3680038418639, "from": "Tsertsel, Ivan Stanislavavich", "to": "853201.0", "width": 1}, {"emt": 401.01425035095815, "from": "Tsertsel, Ivan Stanislavavich", "to": "888531.0", "width": 1}, {"emt": 4083.8514590254417, "from": "173550.0", "to": "Harrell, Ryan Matson Johnson", "width": 1}, {"emt": 381.0260130911381, "from": "199171.0", "to": "Trinidad Y Ramirez, Angelo", "width": 1}, {"emt": 5119.734106690934, "from": "Trinidad Y Ramirez, Angelo", "to": "224976.0", "width": 1}, {"emt": 3864.292535329461, "from": "Trinidad Y Ramirez, Angelo", "to": "237748.0", "width": 1}, {"emt": 3953.51775182677, "from": "Trinidad Y Ramirez, Angelo", "to": "256345.0", "width": 1}, {"emt": 486.5408826286418, "from": "Trinidad Y Ramirez, Angelo", "to": "476223.0", "width": 1}, {"emt": 4063.438622654667, "from": "Trinidad Y Ramirez, Angelo", "to": "491887.0", "width": 1}, {"emt": 2049.524172046833, "from": "202099.0", "to": "Richard Harris", "width": 1}, {"emt": 286.7500008334744, "from": "Richard Harris", "to": "291686.0", "width": 1}, {"emt": 92.0563105878652, "from": "Richard Harris", "to": "684352.0", "width": 1}, {"emt": 115.56096155357396, "from": "Richard Harris", "to": "708565.0", "width": 1}, {"emt": 104.74429694624742, "from": "Richard Harris", "to": "742609.0", "width": 1}, {"emt": 3957.653330053859, "from": "Richard Harris", "to": "824356.0", "width": 1}, {"emt": 1314.2280104635029, "from": "Richard Harris", "to": "869066.0", "width": 1}, {"emt": 398.4402314334522, "from": "Richard Harris", "to": "993180.0", "width": 1}, {"emt": 383.3428671769189, "from": "225525.0", "to": "Smirnova, Natalia", "width": 1}, {"emt": 210.235902965479, "from": "Smirnova, Natalia", "to": "774930.0", "width": 1}, {"emt": 4088.900282372248, "from": "243258.0", "to": "Oleksin, Alexei Ivanovich", "width": 1}, {"emt": 4907.816837686519, "from": "Oleksin, Alexei Ivanovich", "to": "507823.0", "width": 1}, {"emt": 212.4706217067252, "from": "265765.0", "to": "Alexander Pealer", "width": 1}, {"emt": 4884.440280464364, "from": "Alexander Pealer", "to": "774763.0", "width": 1}, {"emt": 5168.927058497745, "from": "Alexander Pealer", "to": "895316.0", "width": 1}, {"emt": 974.5658766839568, "from": "288293.0", "to": "Christine Hines Johnson Dawson", "width": 1}, {"emt": 4046.569896109869, "from": "310299.0", "to": "Jones, Sally Anne", "width": 1}, {"emt": 405.2928262815952, "from": "Jones, Sally Anne", "to": "426345.0", "width": 1}, {"emt": 3029.2993093209207, "from": "Jones, Sally Anne", "to": "712803.0", "width": 1}, {"emt": 506.4993668351141, "from": "Jones, Sally Anne", "to": "717520.0", "width": 1}, {"emt": 4191.546848117439, "from": "Jones, Sally Anne", "to": "967733.0", "width": 1}, {"emt": 488.3212967016336, "from": "317709.0", "to": "Poklonskaya, Natalija Vladimirovna", "width": 1}, {"emt": 4038.0136272876034, "from": "Poklonskaya, Natalija Vladimirovna", "to": "435621.0", "width": 1}, {"emt": 511.3958289723005, "from": "417516.0", "to": "Heather Ann Wilson", "width": 1}, {"emt": 5030.383157490439, "from": "Heather Ann Wilson", "to": "939418.0", "width": 1}, {"emt": 5058.74292740898, "from": "455557.0", "to": "Azarenok, Grigori Yurievich", "width": 1}, {"emt": 487.59310875493776, "from": "Azarenok, Grigori Yurievich", "to": "654829.0", "width": 1}, {"emt": 4044.317482998361, "from": "Azarenok, Grigori Yurievich", "to": "918433.0", "width": 1}, {"emt": 4930.783180968823, "from": "468209.0", "to": "Rakhim Azizboevich Azimov", "width": 1}, {"emt": 407.0939772433203, "from": "Rakhim Azizboevich Azimov", "to": "568406.0", "width": 1}, {"emt": 407.234309328628, "from": "Rakhim Azizboevich Azimov", "to": "684829.0", "width": 1}, {"emt": 3986.284784878877, "from": "Rakhim Azizboevich Azimov", "to": "819257.0", "width": 1}, {"emt": 413.2574377033376, "from": "568406.0", "to": "Hlaing, Min Aung", "width": 1}, {"emt": 400.71683471123606, "from": "Hlaing, Min Aung", "to": "684829.0", "width": 1}, {"emt": 4109.8220476829165, "from": "Hlaing, Min Aung", "to": "737624.0", "width": 1}, {"emt": 3961.907404903559, "from": "Hlaing, Min Aung", "to": "800047.0", "width": 1}, {"emt": 384.7225073327672, "from": "Hlaing, Min Aung", "to": "819257.0", "width": 1}, {"emt": 502.0345455812122, "from": "Hlaing, Min Aung", "to": "893020.0", "width": 1}, {"emt": 1496.8788796602662, "from": "573303.0", "to": "O Jong Gil", "width": 1}, {"emt": 4006.1361806327664, "from": "699168.0", "to": "Cesar Duarte Jaquez", "width": 1}, {"emt": 520.4011461074343, "from": "Cesar Duarte Jaquez", "to": "769677.0", "width": 1}, {"emt": 3052.475482003514, "from": "Cesar Duarte Jaquez", "to": "815111.0", "width": 1}, {"emt": 205.94602698797817, "from": "Leonid I. Kalaschnikow", "to": "Paul Franklin Watson", "width": 1}, {"emt": 4147.230190866892, "from": "852872.0", "to": "Alexey Alexeyevich Gromov", "width": 1}, {"emt": 387.17348800775954, "from": "875037.0", "to": "Mazhuga, Aleksandr G.", "width": 1}, {"emt": 1918.9034409483336, "from": "Mazhuga, Aleksandr G.", "to": "894497.0", "width": 1}, {"emt": 137.13020237583416, "from": "920959.0", "to": "Margaret Smith", "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": true,
+        "filter": [
+            "physics"
+        ]
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+                  // if this network requires displaying the configure window,
+                  // put it in its div
+                  options.configure["container"] = document.getElementById("config");
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+                      network.on("stabilizationProgress", function(params) {
+                          document.getElementById('loadingBar').removeAttribute("style");
+                          var maxWidth = 496;
+                          var minWidth = 20;
+                          var widthFactor = params.iterations/params.total;
+                          var width = Math.max(minWidth,maxWidth * widthFactor);
+                          document.getElementById('bar').style.width = width + 'px';
+                          document.getElementById('text').innerHTML = Math.round(widthFactor*100) + '%';
+                      });
+                      network.once("stabilizationIterationsDone", function() {
+                          document.getElementById('text').innerHTML = '100%';
+                          document.getElementById('bar').style.width = '496px';
+                          document.getElementById('loadingBar').style.opacity = 0;
+                          // really clean the dom element
+                          setTimeout(function () {document.getElementById('loadingBar').style.display = 'none';}, 500);
+                      });
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
